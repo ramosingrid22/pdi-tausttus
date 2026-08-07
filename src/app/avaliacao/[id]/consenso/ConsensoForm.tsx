@@ -1,7 +1,14 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { COMPETENCIAS_COMPORTAMENTAIS, COMPETENCIAS_TECNICAS, PERGUNTAS_COLABORADOR, PERGUNTAS_LIDER } from "@/lib/competencias";
+import {
+  COMPETENCIAS_COMPORTAMENTAIS,
+  COMPETENCIAS_TECNICAS,
+  DESCRICOES_COMPORTAMENTAIS,
+  DESCRICOES_TECNICAS,
+  PERGUNTAS_COLABORADOR,
+  PERGUNTAS_LIDER,
+} from "@/lib/competencias";
 
 interface Avaliacao {
   id: string;
@@ -33,6 +40,7 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
   };
 
   const [notas, setNotas] = useState<Record<string, number>>(initNotas);
+  const [expandido, setExpandido] = useState<string | null>(null);
   const [acoesDesenvolvimento, setAcoesDesenvolvimento] = useState([
     { competencia: "", acao: "", prazo: "", responsavel: "" },
   ]);
@@ -114,24 +122,67 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
                 <th className="text-center pb-3">Consenso</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-stone-50">
+            <tbody>
               {todasCompetencias.map((comp) => {
                 const autoNota = auto?.notas?.[comp] ?? "—";
                 const liderNota = lider?.notas?.[comp] ?? "—";
                 const diff = typeof autoNota === "number" && typeof liderNota === "number" && Math.abs(autoNota - liderNota) >= 2;
+                const allDescricoes = { ...DESCRICOES_COMPORTAMENTAIS, ...(DESCRICOES_TECNICAS[avaliacao.cargo] ?? {}) };
+                const desc = allDescricoes[comp];
+                const isExpanded = expandido === comp;
+                const notaSelecionada = notas[comp];
+                const NOTA_LABELS: Record<number, string> = {
+                  1: "Precisa melhorar muito",
+                  2: "Precisa melhorar",
+                  3: "Atende ao esperado",
+                  4: "Acima do esperado",
+                  5: "Exemplo para a equipe",
+                };
                 return (
-                  <tr key={comp} className={diff ? "bg-amber-50" : ""}>
-                    <td className="py-2.5 pr-4">
-                      <span className="font-medium text-stone-700">{comp}</span>
-                      {diff && <span className="ml-2 text-xs text-amber-600">⚠ Divergência</span>}
+                  <tr key={comp} className={`border-b border-stone-50 ${diff ? "bg-amber-50" : ""}`}>
+                    <td className="py-3 pr-4 align-top">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-stone-700">{comp}</span>
+                        {diff && <span className="text-xs text-amber-600 font-medium">⚠ Divergência</span>}
+                        {desc && (
+                          <button
+                            type="button"
+                            onClick={() => setExpandido(isExpanded ? null : comp)}
+                            className="text-xs text-brand-orange hover:underline"
+                          >
+                            {isExpanded ? "menos ▲" : "ver descrição ▼"}
+                          </button>
+                        )}
+                      </div>
+                      {desc && <p className="text-xs text-stone-400 mt-0.5">{desc.definicao}</p>}
+                      {isExpanded && desc && (
+                        <div className="mt-2 rounded-lg border border-stone-100 overflow-hidden text-xs">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <div
+                              key={n}
+                              className={`flex gap-2 px-3 py-1.5 border-b border-stone-50 last:border-0 cursor-pointer hover:bg-stone-50 ${notaSelecionada === n ? "bg-orange-50" : ""}`}
+                              onClick={() => setNotas((p) => ({ ...p, [comp]: n }))}
+                            >
+                              <span className={`font-bold w-4 shrink-0 ${notaSelecionada === n ? "text-brand-orange" : "text-stone-400"}`}>{n}</span>
+                              <span className="text-stone-500">{desc.notas[n]}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {notaSelecionada > 0 && desc?.notas[notaSelecionada] && !isExpanded && (
+                        <div className="mt-1.5 bg-orange-50 border border-orange-100 rounded px-2 py-1">
+                          <span className="text-xs font-semibold text-brand-orange">{NOTA_LABELS[notaSelecionada]}: </span>
+                          <span className="text-xs text-stone-600">{desc.notas[notaSelecionada]}</span>
+                        </div>
+                      )}
                     </td>
-                    <td className="text-center py-2.5">
+                    <td className="text-center py-3 align-top">
                       <NotaBadge nota={autoNota} />
                     </td>
-                    <td className="text-center py-2.5">
+                    <td className="text-center py-3 align-top">
                       <NotaBadge nota={liderNota} />
                     </td>
-                    <td className="text-center py-2.5">
+                    <td className="text-center py-3 align-top">
                       <div className="flex justify-center gap-1">
                         {[1, 2, 3, 4, 5].map((n) => (
                           <button
