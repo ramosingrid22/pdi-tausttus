@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/Header";
 import { COMPETENCIAS_COMPORTAMENTAIS, COMPETENCIAS_TECNICAS } from "@/lib/competencias";
 import { PrintButton } from "./PrintButton";
+import { ReopenButton } from "./ReopenButton";
 
 export default async function RelatorioPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -49,6 +50,9 @@ export default async function RelatorioPage({ params }: { params: { id: string }
         <div className="flex items-center gap-3 mb-6">
           <a href="/dashboard" className="btn-secondary text-sm">← Voltar</a>
           <PrintButton />
+          {user.role === "ADMIN" && avaliacao.status === "CONCLUIDA" && (
+            <ReopenButton avaliacaoId={avaliacao.id} />
+          )}
         </div>
       </div>
 
