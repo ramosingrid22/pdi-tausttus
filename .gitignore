@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+
+# env
+.env
+.env.local
+.env*.local
+
+# database (SQLite local — o servidor usa variável de ambiente)
+prisma/dev.db
+prisma/dev.db-journal
+
+# misc
+.DS_Store
+*.log
+npm-debug.log*
+
+# scripts de manutenção local
+scripts/
+
+# build
+build/

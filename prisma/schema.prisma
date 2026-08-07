@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  username  String   @unique
+  password  String
+  role               String
+  cargo              String?
+  unidade            String?
+  liderId            String?
+  mustChangePassword Boolean @default(false)
+  lider     User?    @relation("LiderColaborador", fields: [liderId], references: [id])
+  colaboradores User[] @relation("LiderColaborador")
+
+  avaliacoesComoColaborador Avaliacao[] @relation("Colaborador")
+  avaliacoesComoLider       Avaliacao[] @relation("Lider")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Avaliacao {
+  id            String          @id @default(cuid())
+  colaboradorId String
+  colaborador   User            @relation("Colaborador", fields: [colaboradorId], references: [id])
+  liderId       String
+  lider         User            @relation("Lider", fields: [liderId], references: [id])
+  cargo         String
+  periodo       String
+  unidade       String
+  status        String @default("AGUARDANDO_COLABORADOR")
+
+  autoavaliacao  String?
+  avaliacaoLider String?
+  consenso       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
