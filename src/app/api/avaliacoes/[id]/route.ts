@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { gerarSintese } from "@/lib/gerarSintese";
 
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -80,9 +81,30 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (avaliacao.status !== "AGUARDANDO_CONSENSO") {
       return NextResponse.json({ error: "Fase incorreta" }, { status: 400 });
     }
+
+    const avaliacaoCompleta = await prisma.avaliacao.findUnique({
+      where: { id: params.id },
+      include: { colaborador: { select: { name: true } } },
+    });
+
+    const auto = avaliacaoCompleta?.autoavaliacao
+      ? JSON.parse(avaliacaoCompleta.autoavaliacao as string) : null;
+    const lider = avaliacaoCompleta?.avaliacaoLider
+      ? JSON.parse(avaliacaoCompleta.avaliacaoLider as string) : null;
+
+    const sintese = await gerarSintese({
+      colaboradorNome: avaliacaoCompleta?.colaborador.name ?? "",
+      cargo: avaliacao.cargo,
+      periodo: avaliacao.periodo,
+      auto,
+      lider,
+    }).catch(() => "");
+
+    const dadosComSintese = { ...body.dados, sintese };
+
     const updated = await prisma.avaliacao.update({
       where: { id: params.id },
-      data: { consenso: JSON.stringify(body.dados), status: "CONCLUIDA" },
+      data: { consenso: JSON.stringify(dadosComSintese), status: "CONCLUIDA" },
     });
     return NextResponse.json(updated);
   }

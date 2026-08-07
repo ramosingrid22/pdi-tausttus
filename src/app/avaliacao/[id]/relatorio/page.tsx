@@ -140,6 +140,14 @@ export default async function RelatorioPage({ params }: { params: { id: string }
           </div>
         )}
 
+        {/* Síntese narrativa gerada por IA */}
+        {consenso?.sintese && (
+          <div className="card border-l-4 border-brand-orange">
+            <h3 className="font-semibold text-stone-700 mb-3">📝 Síntese Narrativa</h3>
+            <p className="text-sm text-stone-600 whitespace-pre-line leading-relaxed">{consenso.sintese}</p>
+          </div>
+        )}
+
         {/* PDI */}
         {consenso?.acoesDesenvolvimento?.some((a: any) => a.acao) && (
           <div className="card">
