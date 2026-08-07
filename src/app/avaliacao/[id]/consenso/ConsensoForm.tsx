@@ -62,7 +62,7 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
 
   const [notas, setNotas] = useState<Record<string, number>>(draft?.notas ?? initNotas());
   const [expandido, setExpandido] = useState<string | null>(null);
-  const [acoesDesenvolvimento, setAcoesDesenvolvimento] = useState(
+  const [acoesDesenvolvimento, setAcoesDesenvolvimento] = useState<{ competencia: string; acao: string; prazo: string; responsavel: string }[]>(
     draft?.acoesDesenvolvimento ?? [{ competencia: "", acao: "", prazo: "", responsavel: "" }]
   );
   const [pontosFortes, setPontosFortes] = useState(draft?.pontosFortes ?? "");
