@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { COMPETENCIAS_COMPORTAMENTAIS, COMPETENCIAS_TECNICAS } from "@/lib/competencias";
+import { COMPETENCIAS_COMPORTAMENTAIS, COMPETENCIAS_TECNICAS, PERGUNTAS_COLABORADOR, PERGUNTAS_LIDER } from "@/lib/competencias";
 
 interface Avaliacao {
   id: string;
@@ -151,6 +151,94 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Respostas escritas — comparativo */}
+      <div className="card space-y-6">
+        <h2 className="font-semibold text-stone-700">Respostas Escritas — Comparativo</h2>
+
+        {/* Comentários por competência */}
+        {todasCompetencias.some((c) => auto?.comentarios?.[c] || lider?.comentarios?.[c]) && (
+          <div>
+            <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-3">Comentários por competência</h3>
+            <div className="space-y-3">
+              {todasCompetencias.map((comp) => {
+                const autoComent = auto?.comentarios?.[comp];
+                const liderComent = lider?.comentarios?.[comp];
+                if (!autoComent && !liderComent) return null;
+                return (
+                  <div key={comp} className="border border-stone-100 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-stone-500 mb-2">{comp}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {autoComent && (
+                        <div className="bg-blue-50 rounded-lg px-3 py-2">
+                          <p className="text-xs text-blue-500 font-medium mb-1">Colaborador</p>
+                          <p className="text-sm text-stone-700">{autoComent}</p>
+                        </div>
+                      )}
+                      {liderComent && (
+                        <div className="bg-amber-50 rounded-lg px-3 py-2">
+                          <p className="text-xs text-amber-600 font-medium mb-1">Líder</p>
+                          <p className="text-sm text-stone-700">{liderComent}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Perguntas abertas */}
+        <div>
+          <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-3">Perguntas abertas</h3>
+          <div className="space-y-4">
+            {PERGUNTAS_COLABORADOR.map((pergunta, i) => {
+              const autoResp = auto?.respostas?.[pergunta];
+              const liderPergunta = PERGUNTAS_LIDER[i];
+              const liderResp = lider?.respostas?.[liderPergunta];
+              if (!autoResp && !liderResp) return null;
+              return (
+                <div key={i} className="border border-stone-100 rounded-lg p-3 space-y-2">
+                  {autoResp && (
+                    <div className="bg-blue-50 rounded-lg px-3 py-2">
+                      <p className="text-xs text-blue-500 font-medium mb-1">Colaborador — {pergunta}</p>
+                      <p className="text-sm text-stone-700">{autoResp}</p>
+                    </div>
+                  )}
+                  {liderResp && liderPergunta && (
+                    <div className="bg-amber-50 rounded-lg px-3 py-2">
+                      <p className="text-xs text-amber-600 font-medium mb-1">Líder — {liderPergunta}</p>
+                      <p className="text-sm text-stone-700">{liderResp}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Comentário geral */}
+        {(auto?.comentarioGeral || lider?.comentarioGeral) && (
+          <div>
+            <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-3">Comentário geral</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {auto?.comentarioGeral && (
+                <div className="bg-blue-50 rounded-lg px-3 py-2">
+                  <p className="text-xs text-blue-500 font-medium mb-1">Colaborador</p>
+                  <p className="text-sm text-stone-700">{auto.comentarioGeral}</p>
+                </div>
+              )}
+              {lider?.comentarioGeral && (
+                <div className="bg-amber-50 rounded-lg px-3 py-2">
+                  <p className="text-xs text-amber-600 font-medium mb-1">Líder</p>
+                  <p className="text-sm text-stone-700">{lider.comentarioGeral}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Pontos fortes e melhoria */}
