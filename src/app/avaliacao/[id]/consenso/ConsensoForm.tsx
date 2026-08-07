@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   COMPETENCIAS_COMPORTAMENTAIS,
@@ -48,16 +48,44 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
     return n;
   };
 
-  const [notas, setNotas] = useState<Record<string, number>>(initNotas);
+  const draftKey = `consenso-draft-${avaliacao.id}`;
+
+  const loadDraft = () => {
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch { return null; }
+  };
+
+  const draft = typeof window !== "undefined" ? loadDraft() : null;
+
+  const [notas, setNotas] = useState<Record<string, number>>(draft?.notas ?? initNotas());
   const [expandido, setExpandido] = useState<string | null>(null);
-  const [acoesDesenvolvimento, setAcoesDesenvolvimento] = useState([
-    { competencia: "", acao: "", prazo: "", responsavel: "" },
-  ]);
-  const [pontosFortes, setPontosFortes] = useState("");
-  const [pontosMelhoria, setPontosMelhoria] = useState("");
-  const [comentarioFinal, setComentarioFinal] = useState("");
+  const [acoesDesenvolvimento, setAcoesDesenvolvimento] = useState(
+    draft?.acoesDesenvolvimento ?? [{ competencia: "", acao: "", prazo: "", responsavel: "" }]
+  );
+  const [pontosFortes, setPontosFortes] = useState(draft?.pontosFortes ?? "");
+  const [pontosMelhoria, setPontosMelhoria] = useState(draft?.pontosMelhoria ?? "");
+  const [comentarioFinal, setComentarioFinal] = useState(draft?.comentarioFinal ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [savedAt, setSavedAt] = useState<string | null>(draft?.savedAt ?? null);
+
+  const saveDraft = useCallback(() => {
+    try {
+      const now = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      localStorage.setItem(draftKey, JSON.stringify({
+        notas, acoesDesenvolvimento, pontosFortes, pontosMelhoria, comentarioFinal, savedAt: now,
+      }));
+      setSavedAt(now);
+    } catch {}
+  }, [draftKey, notas, acoesDesenvolvimento, pontosFortes, pontosMelhoria, comentarioFinal]);
+
+  useEffect(() => {
+    const t = setTimeout(saveDraft, 1000);
+    return () => clearTimeout(t);
+  }, [saveDraft]);
 
   function addAcao() {
     setAcoesDesenvolvimento((prev) => [...prev, { competencia: "", acao: "", prazo: "", responsavel: "" }]);
@@ -82,6 +110,7 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
       body: JSON.stringify({ fase: "consenso", dados }),
     });
     if (!res.ok) { setError("Erro ao salvar consenso."); setLoading(false); return; }
+    try { localStorage.removeItem(draftKey); } catch {}
     router.push(`/avaliacao/${avaliacao.id}/relatorio`);
   }
 
@@ -103,9 +132,14 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
             {avaliacao.periodo}
           </span>
         </div>
-        <p className="text-sm text-stone-500 mt-4 border-t border-stone-100 pt-4">
-          Para cada competência, veja as notas e comentários de cada parte. Ajuste a nota de consenso e, ao terminar, preencha o PDI.
-        </p>
+        <div className="flex items-center justify-between mt-4 border-t border-stone-100 pt-4">
+          <p className="text-sm text-stone-500">
+            Para cada competência, veja as notas e comentários de cada parte. Ajuste a nota de consenso e, ao terminar, preencha o PDI.
+          </p>
+          {savedAt && (
+            <span className="text-xs text-stone-400 shrink-0 ml-4">💾 Rascunho salvo às {savedAt}</span>
+          )}
+        </div>
       </div>
 
       {/* Competências Comportamentais */}
