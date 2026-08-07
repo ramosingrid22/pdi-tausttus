@@ -21,10 +21,19 @@ interface Avaliacao {
   avaliacaoLider: any;
 }
 
+const NOTA_LABELS: Record<number, string> = {
+  1: "Precisa melhorar muito",
+  2: "Precisa melhorar",
+  3: "Atende ao esperado",
+  4: "Acima do esperado",
+  5: "Exemplo para a equipe",
+};
+
 export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
   const router = useRouter();
   const tecnicas = COMPETENCIAS_TECNICAS[avaliacao.cargo] ?? [];
   const todasCompetencias = [...COMPETENCIAS_COMPORTAMENTAIS, ...tecnicas];
+  const allDescricoes = { ...DESCRICOES_COMPORTAMENTAIS, ...(DESCRICOES_TECNICAS[avaliacao.cargo] ?? {}) };
 
   const auto = avaliacao.autoavaliacao as any;
   const lider = avaliacao.avaliacaoLider as any;
@@ -51,16 +60,11 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
   const [error, setError] = useState("");
 
   function addAcao() {
-    setAcoesDesenvolvimento((prev) => [
-      ...prev,
-      { competencia: "", acao: "", prazo: "", responsavel: "" },
-    ]);
+    setAcoesDesenvolvimento((prev) => [...prev, { competencia: "", acao: "", prazo: "", responsavel: "" }]);
   }
 
   function updateAcao(index: number, field: string, value: string) {
-    setAcoesDesenvolvimento((prev) =>
-      prev.map((a, i) => (i === index ? { ...a, [field]: value } : a))
-    );
+    setAcoesDesenvolvimento((prev) => prev.map((a, i) => (i === index ? { ...a, [field]: value } : a)));
   }
 
   function removeAcao(index: number) {
@@ -71,23 +75,18 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     const dados = { notas, acoesDesenvolvimento, pontosFortes, pontosMelhoria, comentarioFinal };
-
     const res = await fetch(`/pdi/api/avaliacoes/${avaliacao.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fase: "consenso", dados }),
     });
-
-    if (!res.ok) {
-      setError("Erro ao salvar consenso.");
-      setLoading(false);
-      return;
-    }
-
+    if (!res.ok) { setError("Erro ao salvar consenso."); setLoading(false); return; }
     router.push(`/avaliacao/${avaliacao.id}/relatorio`);
   }
+
+  const comportamentais = COMPETENCIAS_COMPORTAMENTAIS;
+  const hasTecnicas = tecnicas.length > 0;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
@@ -105,217 +104,126 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
           </span>
         </div>
         <p className="text-sm text-stone-500 mt-4 border-t border-stone-100 pt-4">
-          Revise as notas comparativas e ajuste para a nota de consenso. Depois, defina as ações de desenvolvimento do PDI.
+          Para cada competência, veja as notas e comentários de cada parte. Ajuste a nota de consenso e, ao terminar, preencha o PDI.
         </p>
       </div>
 
-      {/* Comparativo de notas */}
-      <div className="card">
-        <h2 className="font-semibold text-stone-700 mb-4">Notas Comparativas — Ajuste o Consenso</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-stone-400 uppercase tracking-wide">
-                <th className="text-left pb-3">Competência</th>
-                <th className="text-center pb-3">Colaborador</th>
-                <th className="text-center pb-3">Líder</th>
-                <th className="text-center pb-3">Consenso</th>
-              </tr>
-            </thead>
-            <tbody>
-              {todasCompetencias.map((comp) => {
-                const autoNota = auto?.notas?.[comp] ?? "—";
-                const liderNota = lider?.notas?.[comp] ?? "—";
-                const diff = typeof autoNota === "number" && typeof liderNota === "number" && Math.abs(autoNota - liderNota) >= 2;
-                const allDescricoes = { ...DESCRICOES_COMPORTAMENTAIS, ...(DESCRICOES_TECNICAS[avaliacao.cargo] ?? {}) };
-                const desc = allDescricoes[comp];
-                const isExpanded = expandido === comp;
-                const notaSelecionada = notas[comp];
-                const NOTA_LABELS: Record<number, string> = {
-                  1: "Precisa melhorar muito",
-                  2: "Precisa melhorar",
-                  3: "Atende ao esperado",
-                  4: "Acima do esperado",
-                  5: "Exemplo para a equipe",
-                };
-                return (
-                  <tr key={comp} className={`border-b border-stone-50 ${diff ? "bg-amber-50" : ""}`}>
-                    <td className="py-3 pr-4 align-top">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-stone-700">{comp}</span>
-                        {diff && <span className="text-xs text-amber-600 font-medium">⚠ Divergência</span>}
-                        {desc && (
-                          <button
-                            type="button"
-                            onClick={() => setExpandido(isExpanded ? null : comp)}
-                            className="text-xs text-brand-orange hover:underline"
-                          >
-                            {isExpanded ? "menos ▲" : "ver descrição ▼"}
-                          </button>
-                        )}
-                      </div>
-                      {desc && <p className="text-xs text-stone-400 mt-0.5">{desc.definicao}</p>}
-                      {isExpanded && desc && (
-                        <div className="mt-2 rounded-lg border border-stone-100 overflow-hidden text-xs">
-                          {[1, 2, 3, 4, 5].map((n) => (
-                            <div
-                              key={n}
-                              className={`flex gap-2 px-3 py-1.5 border-b border-stone-50 last:border-0 cursor-pointer hover:bg-stone-50 ${notaSelecionada === n ? "bg-orange-50" : ""}`}
-                              onClick={() => setNotas((p) => ({ ...p, [comp]: n }))}
-                            >
-                              <span className={`font-bold w-4 shrink-0 ${notaSelecionada === n ? "text-brand-orange" : "text-stone-400"}`}>{n}</span>
-                              <span className="text-stone-500">{desc.notas[n]}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {notaSelecionada > 0 && desc?.notas[notaSelecionada] && !isExpanded && (
-                        <div className="mt-1.5 bg-orange-50 border border-orange-100 rounded px-2 py-1">
-                          <span className="text-xs font-semibold text-brand-orange">{NOTA_LABELS[notaSelecionada]}: </span>
-                          <span className="text-xs text-stone-600">{desc.notas[notaSelecionada]}</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="text-center py-3 align-top">
-                      <NotaBadge nota={autoNota} />
-                    </td>
-                    <td className="text-center py-3 align-top">
-                      <NotaBadge nota={liderNota} />
-                    </td>
-                    <td className="text-center py-3 align-top">
-                      <div className="flex justify-center gap-1">
-                        {[1, 2, 3, 4, 5].map((n) => (
-                          <button
-                            key={n}
-                            type="button"
-                            onClick={() => setNotas((p) => ({ ...p, [comp]: n }))}
-                            className={`nota-btn w-8 h-8 text-xs ${notas[comp] === n ? "nota-btn-selected" : "nota-btn-unselected"}`}
-                          >
-                            {n}
-                          </button>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Competências Comportamentais */}
+      <section className="space-y-4">
+        <h2 className="text-xs font-semibold text-stone-400 uppercase tracking-widest px-1">
+          Parte A — Competências Comportamentais
+        </h2>
+        {comportamentais.map((comp) => (
+          <CompetenciaCard
+            key={comp}
+            comp={comp}
+            desc={allDescricoes[comp]}
+            auto={auto}
+            lider={lider}
+            nota={notas[comp]}
+            isExpanded={expandido === comp}
+            onToggle={() => setExpandido(expandido === comp ? null : comp)}
+            onNota={(n) => setNotas((p) => ({ ...p, [comp]: n }))}
+          />
+        ))}
+      </section>
 
-      {/* Respostas escritas — comparativo */}
-      <div className="card space-y-6">
-        <h2 className="font-semibold text-stone-700">Respostas Escritas — Comparativo</h2>
+      {/* Competências Técnicas */}
+      {hasTecnicas && (
+        <section className="space-y-4">
+          <h2 className="text-xs font-semibold text-stone-400 uppercase tracking-widest px-1">
+            Parte B — Competências Técnicas — {avaliacao.cargo}
+          </h2>
+          {tecnicas.map((comp) => (
+            <CompetenciaCard
+              key={comp}
+              comp={comp}
+              desc={allDescricoes[comp]}
+              auto={auto}
+              lider={lider}
+              nota={notas[comp]}
+              isExpanded={expandido === comp}
+              onToggle={() => setExpandido(expandido === comp ? null : comp)}
+              onNota={(n) => setNotas((p) => ({ ...p, [comp]: n }))}
+            />
+          ))}
+        </section>
+      )}
 
-        {/* Comentários por competência */}
-        {todasCompetencias.some((c) => auto?.comentarios?.[c] || lider?.comentarios?.[c]) && (
-          <div>
-            <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-3">Comentários por competência</h3>
-            <div className="space-y-3">
-              {todasCompetencias.map((comp) => {
-                const autoComent = auto?.comentarios?.[comp];
-                const liderComent = lider?.comentarios?.[comp];
-                if (!autoComent && !liderComent) return null;
-                return (
-                  <div key={comp} className="border border-stone-100 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-stone-500 mb-2">{comp}</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {autoComent && (
-                        <div className="bg-blue-50 rounded-lg px-3 py-2">
-                          <p className="text-xs text-blue-500 font-medium mb-1">Colaborador</p>
-                          <p className="text-sm text-stone-700">{autoComent}</p>
-                        </div>
-                      )}
-                      {liderComent && (
-                        <div className="bg-amber-50 rounded-lg px-3 py-2">
-                          <p className="text-xs text-amber-600 font-medium mb-1">Líder</p>
-                          <p className="text-sm text-stone-700">{liderComent}</p>
-                        </div>
-                      )}
-                    </div>
+      {/* Perguntas abertas */}
+      {PERGUNTAS_COLABORADOR.some((p, i) => auto?.respostas?.[p] || lider?.respostas?.[PERGUNTAS_LIDER[i]]) && (
+        <div className="card space-y-5">
+          <h2 className="font-semibold text-stone-700">Parte C — Perguntas para Reflexão</h2>
+          {PERGUNTAS_COLABORADOR.map((pergunta, i) => {
+            const autoResp = auto?.respostas?.[pergunta];
+            const liderPergunta = PERGUNTAS_LIDER[i];
+            const liderResp = lider?.respostas?.[liderPergunta];
+            if (!autoResp && !liderResp) return null;
+            return (
+              <div key={i} className="space-y-3 pt-4 border-t border-stone-100 first:border-0 first:pt-0">
+                {autoResp && (
+                  <div className="bg-blue-50 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-blue-500 mb-2">Colaborador — {pergunta}</p>
+                    <p className="text-sm text-stone-700 leading-relaxed">{autoResp}</p>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+                )}
+                {liderResp && liderPergunta && (
+                  <div className="bg-amber-50 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-amber-600 mb-2">Líder — {liderPergunta}</p>
+                    <p className="text-sm text-stone-700 leading-relaxed">{liderResp}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-        {/* Perguntas abertas */}
-        <div>
-          <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-3">Perguntas abertas</h3>
-          <div className="space-y-4">
-            {PERGUNTAS_COLABORADOR.map((pergunta, i) => {
-              const autoResp = auto?.respostas?.[pergunta];
-              const liderPergunta = PERGUNTAS_LIDER[i];
-              const liderResp = lider?.respostas?.[liderPergunta];
-              if (!autoResp && !liderResp) return null;
-              return (
-                <div key={i} className="border border-stone-100 rounded-lg p-3 space-y-2">
-                  {autoResp && (
-                    <div className="bg-blue-50 rounded-lg px-3 py-2">
-                      <p className="text-xs text-blue-500 font-medium mb-1">Colaborador — {pergunta}</p>
-                      <p className="text-sm text-stone-700">{autoResp}</p>
-                    </div>
-                  )}
-                  {liderResp && liderPergunta && (
-                    <div className="bg-amber-50 rounded-lg px-3 py-2">
-                      <p className="text-xs text-amber-600 font-medium mb-1">Líder — {liderPergunta}</p>
-                      <p className="text-sm text-stone-700">{liderResp}</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+      {/* Comentário geral */}
+      {(auto?.comentarioGeral || lider?.comentarioGeral) && (
+        <div className="card space-y-3">
+          <h2 className="font-semibold text-stone-700">Parte D — Comentário Geral</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {auto?.comentarioGeral && (
+              <div className="bg-blue-50 rounded-xl p-4">
+                <p className="text-xs font-semibold text-blue-500 mb-2">Colaborador</p>
+                <p className="text-sm text-stone-700 leading-relaxed">{auto.comentarioGeral}</p>
+              </div>
+            )}
+            {lider?.comentarioGeral && (
+              <div className="bg-amber-50 rounded-xl p-4">
+                <p className="text-xs font-semibold text-amber-600 mb-2">Líder</p>
+                <p className="text-sm text-stone-700 leading-relaxed">{lider.comentarioGeral}</p>
+              </div>
+            )}
           </div>
         </div>
+      )}
 
-        {/* Comentário geral */}
-        {(auto?.comentarioGeral || lider?.comentarioGeral) && (
-          <div>
-            <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-3">Comentário geral</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {auto?.comentarioGeral && (
-                <div className="bg-blue-50 rounded-lg px-3 py-2">
-                  <p className="text-xs text-blue-500 font-medium mb-1">Colaborador</p>
-                  <p className="text-sm text-stone-700">{auto.comentarioGeral}</p>
-                </div>
-              )}
-              {lider?.comentarioGeral && (
-                <div className="bg-amber-50 rounded-lg px-3 py-2">
-                  <p className="text-xs text-amber-600 font-medium mb-1">Líder</p>
-                  <p className="text-sm text-stone-700">{lider.comentarioGeral}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Pontos fortes e melhoria */}
+      {/* Síntese */}
       <div className="card space-y-4">
         <h2 className="font-semibold text-stone-700">Síntese do Consenso</h2>
         <div>
-          <label className="block text-sm font-medium text-stone-600 mb-1">Pontos fortes reconhecidos</label>
+          <label className="block text-sm font-medium text-stone-600 mb-2">Pontos fortes reconhecidos</label>
           <textarea
             value={pontosFortes}
             onChange={(e) => setPontosFortes(e.target.value)}
-            className="input-field min-h-[80px]"
+            className="input-field min-h-[90px]"
             placeholder="O que o(a) colaborador(a) faz muito bem..."
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-600 mb-1">Pontos a desenvolver</label>
+          <label className="block text-sm font-medium text-stone-600 mb-2">Pontos a desenvolver</label>
           <textarea
             value={pontosMelhoria}
             onChange={(e) => setPontosMelhoria(e.target.value)}
-            className="input-field min-h-[80px]"
+            className="input-field min-h-[90px]"
             placeholder="Onde há maior oportunidade de crescimento..."
           />
         </div>
       </div>
 
-      {/* PDI — Ações */}
+      {/* PDI */}
       <div className="card space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-stone-700">PDI — Ações de Desenvolvimento</h2>
@@ -323,61 +231,36 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
             + Adicionar ação
           </button>
         </div>
-
         {acoesDesenvolvimento.map((acao, i) => (
-          <div key={i} className="border border-stone-100 rounded-lg p-4 space-y-3">
+          <div key={i} className="border border-stone-100 rounded-xl p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-stone-400 uppercase">Ação {i + 1}</span>
+              <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide">Ação {i + 1}</span>
               {acoesDesenvolvimento.length > 1 && (
                 <button type="button" onClick={() => removeAcao(i)} className="text-xs text-red-400 hover:text-red-600">
                   Remover
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-stone-500 mb-1">Competência</label>
-                <select
-                  value={acao.competencia}
-                  onChange={(e) => updateAcao(i, "competencia", e.target.value)}
-                  className="input-field text-sm"
-                >
+                <label className="block text-xs text-stone-500 mb-1.5">Competência</label>
+                <select value={acao.competencia} onChange={(e) => updateAcao(i, "competencia", e.target.value)} className="input-field text-sm">
                   <option value="">Selecione...</option>
-                  {todasCompetencias.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
+                  {todasCompetencias.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-stone-500 mb-1">Prazo</label>
-                <input
-                  type="text"
-                  value={acao.prazo}
-                  onChange={(e) => updateAcao(i, "prazo", e.target.value)}
-                  className="input-field text-sm"
-                  placeholder="ex: 30 dias, Out/2026"
-                />
+                <label className="block text-xs text-stone-500 mb-1.5">Prazo</label>
+                <input type="text" value={acao.prazo} onChange={(e) => updateAcao(i, "prazo", e.target.value)} className="input-field text-sm" placeholder="ex: 30 dias, Out/2026" />
               </div>
             </div>
             <div>
-              <label className="block text-xs text-stone-500 mb-1">Ação / O que fazer</label>
-              <input
-                type="text"
-                value={acao.acao}
-                onChange={(e) => updateAcao(i, "acao", e.target.value)}
-                className="input-field text-sm"
-                placeholder="Descreva a ação de desenvolvimento..."
-              />
+              <label className="block text-xs text-stone-500 mb-1.5">Ação / O que fazer</label>
+              <input type="text" value={acao.acao} onChange={(e) => updateAcao(i, "acao", e.target.value)} className="input-field text-sm" placeholder="Descreva a ação de desenvolvimento..." />
             </div>
             <div>
-              <label className="block text-xs text-stone-500 mb-1">Responsável pelo apoio</label>
-              <input
-                type="text"
-                value={acao.responsavel}
-                onChange={(e) => updateAcao(i, "responsavel", e.target.value)}
-                className="input-field text-sm"
-                placeholder="Quem apoia? (líder, RH, próprio colaborador...)"
-              />
+              <label className="block text-xs text-stone-500 mb-1.5">Responsável pelo apoio</label>
+              <input type="text" value={acao.responsavel} onChange={(e) => updateAcao(i, "responsavel", e.target.value)} className="input-field text-sm" placeholder="Quem apoia? (líder, RH, próprio colaborador...)" />
             </div>
           </div>
         ))}
@@ -389,7 +272,7 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
         <textarea
           value={comentarioFinal}
           onChange={(e) => setComentarioFinal(e.target.value)}
-          className="input-field min-h-[80px]"
+          className="input-field min-h-[90px]"
           placeholder="Observações gerais sobre a reunião de consenso..."
         />
       </div>
@@ -400,17 +283,111 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
         <button type="submit" disabled={loading} className="btn-primary">
           {loading ? "Salvando..." : "Concluir e gerar relatório"}
         </button>
-        <button type="button" onClick={() => router.back()} className="btn-secondary">
-          Voltar
-        </button>
+        <button type="button" onClick={() => router.back()} className="btn-secondary">Voltar</button>
       </div>
     </form>
   );
 }
 
-function NotaBadge({ nota }: { nota: number | string }) {
-  if (nota === "—" || nota === 0) return <span className="text-stone-300">—</span>;
-  const colors: Record<number, string> = {
+function CompetenciaCard({
+  comp, desc, auto, lider, nota, isExpanded, onToggle, onNota,
+}: {
+  comp: string;
+  desc: any;
+  auto: any;
+  lider: any;
+  nota: number;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onNota: (n: number) => void;
+}) {
+  const autoNota = auto?.notas?.[comp] ?? 0;
+  const liderNota = lider?.notas?.[comp] ?? 0;
+  const autoComent = auto?.comentarios?.[comp];
+  const liderComent = lider?.comentarios?.[comp];
+  const diff = autoNota > 0 && liderNota > 0 && Math.abs(autoNota - liderNota) >= 2;
+
+  return (
+    <div className={`card space-y-4 ${diff ? "border-l-4 border-amber-400" : ""}`}>
+      {/* Nome + toggle */}
+      <div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-stone-800">{comp}</span>
+          {diff && <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">⚠ Divergência</span>}
+          {desc && (
+            <button type="button" onClick={onToggle} className="text-xs text-brand-orange hover:underline">
+              {isExpanded ? "ocultar ▲" : "ver critérios ▼"}
+            </button>
+          )}
+        </div>
+        {desc && <p className="text-xs text-stone-400 mt-1">{desc.definicao}</p>}
+      </div>
+
+      {/* Critérios expandidos */}
+      {isExpanded && desc && (
+        <div className="rounded-xl border border-stone-100 overflow-hidden">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <div
+              key={n}
+              onClick={() => onNota(n)}
+              className={`flex gap-3 px-4 py-2.5 border-b border-stone-50 last:border-0 cursor-pointer hover:bg-stone-50 text-sm ${nota === n ? "bg-orange-50" : ""}`}
+            >
+              <span className={`font-bold w-4 shrink-0 ${nota === n ? "text-brand-orange" : "text-stone-300"}`}>{n}</span>
+              <span className="text-stone-600">{desc.notas[n]}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Notas lado a lado */}
+      <div className="grid grid-cols-3 gap-3">
+        <NotaBox label="Colaborador" nota={autoNota} color="blue" />
+        <NotaBox label="Líder" nota={liderNota} color="amber" />
+        <div className="rounded-xl border-2 border-stone-200 p-3 text-center space-y-2">
+          <p className="text-xs font-semibold text-stone-500">Consenso</p>
+          <div className="flex justify-center gap-1.5">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => onNota(n)}
+                className={`nota-btn w-8 h-8 text-xs ${nota === n ? "nota-btn-selected" : "nota-btn-unselected"}`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          {nota > 0 && (
+            <p className="text-xs text-brand-orange font-medium">{NOTA_LABELS[nota]}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Comentários */}
+      {(autoComent || liderComent) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          {autoComent && (
+            <div className="bg-blue-50 rounded-xl p-4">
+              <p className="text-xs font-semibold text-blue-500 mb-1.5">Colaborador</p>
+              <p className="text-sm text-stone-700 leading-relaxed">{autoComent}</p>
+            </div>
+          )}
+          {liderComent && (
+            <div className="bg-amber-50 rounded-xl p-4">
+              <p className="text-xs font-semibold text-amber-600 mb-1.5">Líder</p>
+              <p className="text-sm text-stone-700 leading-relaxed">{liderComent}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NotaBox({ label, nota, color }: { label: string; nota: number; color: "blue" | "amber" }) {
+  const bg = color === "blue" ? "bg-blue-50" : "bg-amber-50";
+  const text = color === "blue" ? "text-blue-500" : "text-amber-600";
+  const notaColors: Record<number, string> = {
     1: "bg-red-100 text-red-700",
     2: "bg-orange-100 text-orange-700",
     3: "bg-yellow-100 text-yellow-700",
@@ -418,8 +395,18 @@ function NotaBadge({ nota }: { nota: number | string }) {
     5: "bg-emerald-100 text-emerald-700",
   };
   return (
-    <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${colors[nota as number] ?? ""}`}>
-      {nota}
-    </span>
+    <div className={`${bg} rounded-xl p-3 text-center space-y-2`}>
+      <p className={`text-xs font-semibold ${text}`}>{label}</p>
+      {nota > 0 ? (
+        <>
+          <span className={`inline-flex items-center justify-center w-9 h-9 rounded-full text-sm font-black ${notaColors[nota] ?? ""}`}>
+            {nota}
+          </span>
+          <p className="text-xs text-stone-500">{NOTA_LABELS[nota]}</p>
+        </>
+      ) : (
+        <span className="text-stone-300 text-lg">—</span>
+      )}
+    </div>
   );
 }
