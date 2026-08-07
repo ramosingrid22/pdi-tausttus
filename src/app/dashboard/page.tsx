@@ -7,11 +7,18 @@ import { Header } from "@/components/Header";
 import { Saudacao } from "@/components/Saudacao";
 import Link from "next/link";
 
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+const STATUS_LABELS_COLABORADOR: Record<string, { label: string; color: string }> = {
   AGUARDANDO_COLABORADOR: { label: "Aguardando você",     color: "bg-amber-100 text-amber-800" },
   AGUARDANDO_LIDER:       { label: "Aguardando líder",    color: "bg-blue-100 text-blue-800" },
   AGUARDANDO_CONSENSO:    { label: "Reunião de consenso", color: "bg-purple-100 text-purple-800" },
   CONCLUIDA:              { label: "Concluída",           color: "bg-green-100 text-green-800" },
+};
+
+const STATUS_LABELS_LIDER: Record<string, { label: string; color: string }> = {
+  AGUARDANDO_COLABORADOR: { label: "Aguardando colaborador", color: "bg-amber-100 text-amber-800" },
+  AGUARDANDO_LIDER:       { label: "Aguardando você",        color: "bg-blue-100 text-blue-800" },
+  AGUARDANDO_CONSENSO:    { label: "Reunião de consenso",    color: "bg-purple-100 text-purple-800" },
+  CONCLUIDA:              { label: "Concluída",              color: "bg-green-100 text-green-800" },
 };
 
 function statusParaFase(status: string, role: string) {
@@ -39,7 +46,7 @@ export default async function Dashboard() {
         colaborador: { select: { name: true, cargo: true } },
         lider: { select: { name: true } },
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: { colaborador: { name: "asc" } },
     });
   } else if (isLider) {
     // líder vê a própria avaliação (como colaborador) + avaliações onde é o líder
@@ -49,7 +56,7 @@ export default async function Dashboard() {
         colaborador: { select: { name: true, cargo: true } },
         lider: { select: { name: true } },
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: { colaborador: { name: "asc" } },
     });
   } else {
     avaliacoes = await prisma.avaliacao.findMany({
@@ -58,7 +65,7 @@ export default async function Dashboard() {
         colaborador: { select: { name: true, cargo: true } },
         lider: { select: { name: true } },
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: { colaborador: { name: "asc" } },
     });
   }
 
@@ -91,13 +98,15 @@ export default async function Dashboard() {
               <div className="space-y-2">
                 {pendentes.map((av) => {
                   const fase = statusParaFase(av.status, user.role);
-                  const st = STATUS_LABELS[av.status];
+                  const isOwnEval = av.colaboradorId === user.id;
+                  const labels = isOwnEval ? STATUS_LABELS_COLABORADOR : STATUS_LABELS_LIDER;
+                  const st = labels[av.status];
                   return (
                     <Link key={av.id} href={`/avaliacao/${av.id}/${fase}`}
                       className="card flex items-center justify-between hover:border-brand-orange transition-colors group">
                       <div>
                         <div className="font-semibold text-stone-800 group-hover:text-brand-orange transition-colors">
-                          {av.colaboradorId === user.id ? "Minha Avaliação de Desempenho" : av.colaborador.name}
+                          {isOwnEval ? "Minha Avaliação de Desempenho" : av.colaborador.name}
                         </div>
                         <div className="text-sm text-stone-400 mt-0.5">
                           {av.colaborador.cargo} · {av.periodo}
@@ -192,7 +201,7 @@ export default async function Dashboard() {
             <div className="space-y-2">
               {pendentes.map((av) => {
                 const fase = statusParaFase(av.status, user.role);
-                const st = STATUS_LABELS[av.status];
+                const st = STATUS_LABELS_LIDER[av.status];
                 return (
                   <Link key={av.id} href={`/avaliacao/${av.id}/${fase}`}
                     className="card flex items-center justify-between hover:border-brand-orange transition-colors group">
