@@ -151,13 +151,13 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
       )}
 
       {/* Perguntas abertas */}
-      {PERGUNTAS_COLABORADOR.some((p, i) => auto?.respostas?.[p] || lider?.respostas?.[PERGUNTAS_LIDER[i]]) && (
+      {PERGUNTAS_COLABORADOR.some((_, i) => auto?.respostas?.[String(i)] || lider?.respostas?.[String(i)]) && (
         <div className="card space-y-5">
           <h2 className="font-semibold text-stone-700">Parte C — Perguntas para Reflexão</h2>
           {PERGUNTAS_COLABORADOR.map((pergunta, i) => {
-            const autoResp = auto?.respostas?.[pergunta];
+            const autoResp = auto?.respostas?.[String(i)];
             const liderPergunta = PERGUNTAS_LIDER[i];
-            const liderResp = lider?.respostas?.[liderPergunta];
+            const liderResp = lider?.respostas?.[String(i)];
             if (!autoResp && !liderResp) return null;
             return (
               <div key={i} className="space-y-3 pt-4 border-t border-stone-100 first:border-0 first:pt-0">
