@@ -37,6 +37,12 @@ export async function gerarSintese(params: {
   periodo: string;
   auto: DadosAvaliacao | null;
   lider: DadosAvaliacao | null;
+  consenso?: {
+    pontosFortes?: string;
+    pontosMelhoria?: string;
+    comentarioFinal?: string;
+    acoesDesenvolvimento?: { competencia: string; acao: string; prazo: string; responsavel: string }[];
+  } | null;
 }): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return "";
@@ -46,19 +52,34 @@ export async function gerarSintese(params: {
 
   if (!textoAuto && !textoLider) return "";
 
+  const c = params.consenso;
+  const textoConsenso = [
+    c?.pontosFortes ? `Pontos fortes reconhecidos no consenso: ${c.pontosFortes}` : "",
+    c?.pontosMelhoria ? `Pontos a desenvolver identificados: ${c.pontosMelhoria}` : "",
+    c?.comentarioFinal ? `Comentário final da reunião: ${c.comentarioFinal}` : "",
+    c?.acoesDesenvolvimento?.filter((a) => a.acao).length
+      ? `Ações de desenvolvimento acordadas:\n` +
+        c.acoesDesenvolvimento
+          .filter((a) => a.acao)
+          .map((a) => `- ${a.competencia}: ${a.acao} (prazo: ${a.prazo || "a definir"})`)
+          .join("\n")
+      : "",
+  ].filter(Boolean).join("\n\n");
+
   const prompt = `Você é um especialista em desenvolvimento humano e avaliação de desempenho.
-Com base nas respostas escritas abaixo, redija uma síntese narrativa objetiva e equilibrada para o relatório de PDI de ${params.colaboradorNome} (${params.cargo}), referente ao período ${params.periodo}.
+Com base nas informações abaixo, redija uma síntese narrativa objetiva e equilibrada para o relatório de PDI de ${params.colaboradorNome} (${params.cargo}), referente ao período ${params.periodo}.
 
 A síntese deve:
 - Ter entre 3 e 5 parágrafos curtos
 - Integrar as perspectivas do colaborador e do líder de forma coesa
-- Destacar pontos de convergência e divergência relevantes
+- Refletir os pontos acordados na reunião de consenso
 - Usar linguagem profissional e construtiva, em português brasileiro
 - Não repetir as perguntas nem as notas numéricas
 - Ser direta, sem introduções do tipo "Com base nas respostas..."
 
-${textoAuto ? `---\n${textoAuto}\n---` : ""}
-${textoLider ? `---\n${textoLider}\n---` : ""}`;
+${textoAuto ? `--- Respostas do colaborador ---\n${textoAuto}\n` : ""}
+${textoLider ? `--- Avaliação do líder ---\n${textoLider}\n` : ""}
+${textoConsenso ? `--- Considerações do consenso ---\n${textoConsenso}\n` : ""}`;
 
   const client = new Anthropic({ apiKey });
   const message = await client.messages.create({

@@ -98,6 +98,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       periodo: avaliacao.periodo,
       auto,
       lider,
+      consenso: body.dados,
     }).catch(() => "");
 
     const dadosComSintese = { ...body.dados, sintese };
