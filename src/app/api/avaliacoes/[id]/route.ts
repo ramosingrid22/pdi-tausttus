@@ -99,7 +99,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       auto,
       lider,
       consenso: body.dados,
-    }).catch(() => "");
+    }).catch((err) => { console.error("[gerarSintese] erro:", err?.message ?? err); return ""; });
 
     const dadosComSintese = { ...body.dados, sintese };
 

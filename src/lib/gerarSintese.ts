@@ -17,8 +17,9 @@ function formatarRespostas(dados: DadosAvaliacao | null, perguntas: string[], la
     partes.push(`Comentários por competência (${label}):\n` + comentarios.map(([k, v]) => `- ${k}: ${v}`).join("\n"));
   }
 
+  // Respostas abertas são indexadas numericamente ("0", "1", ...), não pelo texto da pergunta
   const respostas = perguntas
-    .map((p) => ({ pergunta: p, resposta: dados.respostas?.[p] }))
+    .map((p, i) => ({ pergunta: p, resposta: dados.respostas?.[String(i)] }))
     .filter((r) => r.resposta?.trim());
   if (respostas.length > 0) {
     partes.push(`Respostas abertas (${label}):\n` + respostas.map((r) => `P: ${r.pergunta}\nR: ${r.resposta}`).join("\n\n"));
@@ -31,6 +32,12 @@ function formatarRespostas(dados: DadosAvaliacao | null, perguntas: string[], la
   return partes.join("\n\n");
 }
 
+function formatarNotas(notas: Record<string, number> | undefined, label: string): string {
+  if (!notas || Object.keys(notas).length === 0) return "";
+  const entradas = Object.entries(notas).map(([comp, nota]) => `- ${comp}: ${nota}/5`).join("\n");
+  return `Notas por competência (${label}):\n${entradas}`;
+}
+
 export async function gerarSintese(params: {
   colaboradorNome: string;
   cargo: string;
@@ -38,6 +45,7 @@ export async function gerarSintese(params: {
   auto: DadosAvaliacao | null;
   lider: DadosAvaliacao | null;
   consenso?: {
+    notas?: Record<string, number>;
     pontosFortes?: string;
     pontosMelhoria?: string;
     comentarioFinal?: string;
@@ -49,8 +57,13 @@ export async function gerarSintese(params: {
 
   const textoAuto = formatarRespostas(params.auto, PERGUNTAS_COLABORADOR, "Colaborador");
   const textoLider = formatarRespostas(params.lider, PERGUNTAS_LIDER, "Líder");
+  const notasAutoStr = formatarNotas(params.auto?.notas, "Colaborador");
+  const notasLiderStr = formatarNotas(params.lider?.notas, "Líder");
+  const notasConsensoStr = formatarNotas(params.consenso?.notas, "Consenso");
 
-  if (!textoAuto && !textoLider) return "";
+  // Gera síntese se houver qualquer conteúdo: texto ou notas
+  const temConteudo = textoAuto || textoLider || notasAutoStr || notasLiderStr || notasConsensoStr;
+  if (!temConteudo) return "";
 
   const c = params.consenso;
   const textoConsenso = [
@@ -66,6 +79,15 @@ export async function gerarSintese(params: {
       : "",
   ].filter(Boolean).join("\n\n");
 
+  const blocos = [
+    textoAuto,
+    !textoAuto && notasAutoStr ? notasAutoStr : "",
+    textoLider,
+    !textoLider && notasLiderStr ? notasLiderStr : "",
+    notasConsensoStr,
+    textoConsenso,
+  ].filter(Boolean);
+
   const prompt = `Você é um especialista em desenvolvimento humano e avaliação de desempenho.
 Com base nas informações abaixo, redija uma síntese narrativa objetiva e equilibrada para o relatório de PDI de ${params.colaboradorNome} (${params.cargo}), referente ao período ${params.periodo}.
 
@@ -74,12 +96,10 @@ A síntese deve:
 - Integrar as perspectivas do colaborador e do líder de forma coesa
 - Refletir os pontos acordados na reunião de consenso
 - Usar linguagem profissional e construtiva, em português brasileiro
-- Não repetir as perguntas nem as notas numéricas
+- Não repetir as perguntas nem as notas numéricas diretamente
 - Ser direta, sem introduções do tipo "Com base nas respostas..."
 
-${textoAuto ? `--- Respostas do colaborador ---\n${textoAuto}\n` : ""}
-${textoLider ? `--- Avaliação do líder ---\n${textoLider}\n` : ""}
-${textoConsenso ? `--- Considerações do consenso ---\n${textoConsenso}\n` : ""}`;
+${blocos.map((b, i) => `--- Bloco ${i + 1} ---\n${b}`).join("\n\n")}`;
 
   const client = new Anthropic({ apiKey });
   const message = await client.messages.create({
