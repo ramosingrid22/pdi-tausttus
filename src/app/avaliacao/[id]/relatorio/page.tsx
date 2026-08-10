@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { COMPETENCIAS_COMPORTAMENTAIS, COMPETENCIAS_TECNICAS } from "@/lib/competencias";
 import { PrintButton } from "./PrintButton";
 import { ReopenButton } from "./ReopenButton";
+import { SinteseButton } from "./SinteseButton";
 
 export default async function RelatorioPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -145,11 +146,13 @@ export default async function RelatorioPage({ params }: { params: { id: string }
         )}
 
         {/* Síntese narrativa gerada por IA */}
-        {consenso?.sintese && (
+        {consenso?.sintese ? (
           <div className="card border-l-4 border-brand-orange">
             <h3 className="font-semibold text-stone-700 mb-3">📝 Síntese Narrativa</h3>
             <p className="text-sm text-stone-600 whitespace-pre-line leading-relaxed">{consenso.sintese}</p>
           </div>
+        ) : consenso && user.role === "ADMIN" && (
+          <SinteseButton avaliacaoId={avaliacao.id} />
         )}
 
         {/* PDI */}
