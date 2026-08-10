@@ -19,6 +19,7 @@ interface Avaliacao {
   lider: { name: string };
   autoavaliacao: any;
   avaliacaoLider: any;
+  consenso: any;
 }
 
 const NOTA_LABELS: Record<number, string> = {
@@ -37,8 +38,11 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
 
   const auto = avaliacao.autoavaliacao as any;
   const lider = avaliacao.avaliacaoLider as any;
+  const consensoExistente = avaliacao.consenso as any;
 
   const initNotas = () => {
+    // Se há consenso salvo, usar essas notas; senão calcular média
+    if (consensoExistente?.notas) return consensoExistente.notas as Record<string, number>;
     const n: Record<string, number> = {};
     todasCompetencias.forEach((c) => {
       const autoNota = auto?.notas?.[c] ?? 0;
@@ -60,14 +64,16 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
 
   const draft = typeof window !== "undefined" ? loadDraft() : null;
 
+  const defaultAcoes = consensoExistente?.acoesDesenvolvimento ?? [{ competencia: "", acao: "", prazo: "", responsavel: "" }];
+
   const [notas, setNotas] = useState<Record<string, number>>(draft?.notas ?? initNotas());
   const [expandido, setExpandido] = useState<string | null>(null);
   const [acoesDesenvolvimento, setAcoesDesenvolvimento] = useState<{ competencia: string; acao: string; prazo: string; responsavel: string }[]>(
-    draft?.acoesDesenvolvimento ?? [{ competencia: "", acao: "", prazo: "", responsavel: "" }]
+    draft?.acoesDesenvolvimento ?? defaultAcoes
   );
-  const [pontosFortes, setPontosFortes] = useState(draft?.pontosFortes ?? "");
-  const [pontosMelhoria, setPontosMelhoria] = useState(draft?.pontosMelhoria ?? "");
-  const [comentarioFinal, setComentarioFinal] = useState(draft?.comentarioFinal ?? "");
+  const [pontosFortes, setPontosFortes] = useState(draft?.pontosFortes ?? consensoExistente?.pontosFortes ?? "");
+  const [pontosMelhoria, setPontosMelhoria] = useState(draft?.pontosMelhoria ?? consensoExistente?.pontosMelhoria ?? "");
+  const [anotacoes, setAnotacoes] = useState(draft?.anotacoes ?? consensoExistente?.anotacoes ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [savedAt, setSavedAt] = useState<string | null>(draft?.savedAt ?? null);
@@ -76,11 +82,11 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
     try {
       const now = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
       localStorage.setItem(draftKey, JSON.stringify({
-        notas, acoesDesenvolvimento, pontosFortes, pontosMelhoria, comentarioFinal, savedAt: now,
+        notas, acoesDesenvolvimento, pontosFortes, pontosMelhoria, anotacoes, savedAt: now,
       }));
       setSavedAt(now);
     } catch {}
-  }, [draftKey, notas, acoesDesenvolvimento, pontosFortes, pontosMelhoria, comentarioFinal]);
+  }, [draftKey, notas, acoesDesenvolvimento, pontosFortes, pontosMelhoria, anotacoes]);
 
   useEffect(() => {
     const t = setTimeout(saveDraft, 1000);
@@ -103,7 +109,7 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const dados = { notas, acoesDesenvolvimento, pontosFortes, pontosMelhoria, comentarioFinal };
+    const dados = { notas, acoesDesenvolvimento, pontosFortes, pontosMelhoria, anotacoes };
     const res = await fetch(`/pdi/api/avaliacoes/${avaliacao.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -300,14 +306,15 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
         ))}
       </div>
 
-      {/* Comentário final */}
+      {/* Anotações do consenso */}
       <div className="card">
-        <h2 className="font-semibold text-stone-700 mb-3">Comentário Final</h2>
+        <h2 className="font-semibold text-stone-700 mb-1">Anotações da Reunião</h2>
+        <p className="text-xs text-stone-400 mb-3">Registro interno da reunião de consenso — combinados, contexto, observações relevantes.</p>
         <textarea
-          value={comentarioFinal}
-          onChange={(e) => setComentarioFinal(e.target.value)}
-          className="input-field min-h-[90px]"
-          placeholder="Observações gerais sobre a reunião de consenso..."
+          value={anotacoes}
+          onChange={(e) => setAnotacoes(e.target.value)}
+          className="input-field min-h-[110px]"
+          placeholder="O que foi discutido, acordado ou observado durante a reunião..."
         />
       </div>
 

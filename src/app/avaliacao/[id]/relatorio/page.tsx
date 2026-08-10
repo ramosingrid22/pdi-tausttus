@@ -181,11 +181,11 @@ export default async function RelatorioPage({ params }: { params: { id: string }
           </div>
         )}
 
-        {/* Comentário final */}
-        {consenso?.comentarioFinal && (
+        {/* Anotações da reunião */}
+        {(consenso?.anotacoes || consenso?.comentarioFinal) && (
           <div className="card">
-            <h3 className="font-semibold text-stone-700 mb-2">Comentário Final</h3>
-            <p className="text-sm text-stone-600 whitespace-pre-line">{consenso.comentarioFinal}</p>
+            <h3 className="font-semibold text-stone-700 mb-2">Anotações da Reunião</h3>
+            <p className="text-sm text-stone-600 whitespace-pre-line">{consenso.anotacoes ?? consenso.comentarioFinal}</p>
           </div>
         )}
 

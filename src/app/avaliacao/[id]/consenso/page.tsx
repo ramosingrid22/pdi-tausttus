@@ -23,6 +23,7 @@ export default async function ConsensoPage({ params }: { params: { id: string } 
     ...avaliacao,
     autoavaliacao: avaliacao.autoavaliacao ? JSON.parse(avaliacao.autoavaliacao as string) : null,
     avaliacaoLider: avaliacao.avaliacaoLider ? JSON.parse(avaliacao.avaliacaoLider as string) : null,
+    consenso: avaliacao.consenso ? JSON.parse(avaliacao.consenso as string) : null,
   };
 
   return (
