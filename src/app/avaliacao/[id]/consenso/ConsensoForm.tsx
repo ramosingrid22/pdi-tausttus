@@ -74,6 +74,9 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
   const [pontosFortes, setPontosFortes] = useState(draft?.pontosFortes ?? consensoExistente?.pontosFortes ?? "");
   const [pontosMelhoria, setPontosMelhoria] = useState(draft?.pontosMelhoria ?? consensoExistente?.pontosMelhoria ?? "");
   const [anotacoes, setAnotacoes] = useState(draft?.anotacoes ?? consensoExistente?.anotacoes ?? "");
+  const [comentariosConsenso, setComentariosConsenso] = useState<Record<string, string>>(
+    draft?.comentariosConsenso ?? consensoExistente?.comentariosConsenso ?? {}
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [savedAt, setSavedAt] = useState<string | null>(draft?.savedAt ?? null);
@@ -82,11 +85,11 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
     try {
       const now = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
       localStorage.setItem(draftKey, JSON.stringify({
-        notas, acoesDesenvolvimento, pontosFortes, pontosMelhoria, anotacoes, savedAt: now,
+        notas, acoesDesenvolvimento, pontosFortes, pontosMelhoria, anotacoes, comentariosConsenso, savedAt: now,
       }));
       setSavedAt(now);
     } catch {}
-  }, [draftKey, notas, acoesDesenvolvimento, pontosFortes, pontosMelhoria, anotacoes]);
+  }, [draftKey, notas, acoesDesenvolvimento, pontosFortes, pontosMelhoria, anotacoes, comentariosConsenso]);
 
   useEffect(() => {
     const t = setTimeout(saveDraft, 1000);
@@ -109,7 +112,7 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const dados = { notas, acoesDesenvolvimento, pontosFortes, pontosMelhoria, anotacoes };
+    const dados = { notas, acoesDesenvolvimento, pontosFortes, pontosMelhoria, anotacoes, comentariosConsenso };
     const res = await fetch(`/pdi/api/avaliacoes/${avaliacao.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -161,9 +164,11 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
             auto={auto}
             lider={lider}
             nota={notas[comp]}
+            comentarioConsenso={comentariosConsenso[comp] ?? ""}
             isExpanded={expandido === comp}
             onToggle={() => setExpandido(expandido === comp ? null : comp)}
             onNota={(n) => setNotas((p) => ({ ...p, [comp]: n }))}
+            onComentario={(v) => setComentariosConsenso((p) => ({ ...p, [comp]: v }))}
           />
         ))}
       </section>
@@ -182,9 +187,11 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
               auto={auto}
               lider={lider}
               nota={notas[comp]}
+              comentarioConsenso={comentariosConsenso[comp] ?? ""}
               isExpanded={expandido === comp}
               onToggle={() => setExpandido(expandido === comp ? null : comp)}
               onNota={(n) => setNotas((p) => ({ ...p, [comp]: n }))}
+              onComentario={(v) => setComentariosConsenso((p) => ({ ...p, [comp]: v }))}
             />
           ))}
         </section>
@@ -331,16 +338,18 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
 }
 
 function CompetenciaCard({
-  comp, desc, auto, lider, nota, isExpanded, onToggle, onNota,
+  comp, desc, auto, lider, nota, comentarioConsenso, isExpanded, onToggle, onNota, onComentario,
 }: {
   comp: string;
   desc: any;
   auto: any;
   lider: any;
   nota: number;
+  comentarioConsenso: string;
   isExpanded: boolean;
   onToggle: () => void;
   onNota: (n: number) => void;
+  onComentario: (v: string) => void;
 }) {
   const autoNota = auto?.notas?.[comp] ?? 0;
   const liderNota = lider?.notas?.[comp] ?? 0;
@@ -421,6 +430,18 @@ function CompetenciaCard({
           )}
         </div>
       )}
+
+      {/* Anotação de consenso por competência */}
+      <div className="pt-1">
+        <label className="block text-xs font-semibold text-stone-400 mb-1.5">Anotação do consenso</label>
+        <textarea
+          value={comentarioConsenso}
+          onChange={(e) => onComentario(e.target.value)}
+          rows={2}
+          className="input-field text-sm resize-none"
+          placeholder="O que foi acordado sobre esta competência na reunião..."
+        />
+      </div>
     </div>
   );
 }
