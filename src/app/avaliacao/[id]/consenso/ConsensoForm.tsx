@@ -64,11 +64,11 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
 
   const draft = typeof window !== "undefined" ? loadDraft() : null;
 
-  const defaultAcoes = consensoExistente?.acoesDesenvolvimento ?? [{ competencia: "", acao: "", prazo: "", responsavel: "" }];
+  const defaultAcoes = consensoExistente?.acoesDesenvolvimento ?? [{ competencia: "", acao: "", prazo: "", prazoData: "", responsavel: "" }];
 
   const [notas, setNotas] = useState<Record<string, number>>(draft?.notas ?? initNotas());
   const [expandido, setExpandido] = useState<string | null>(null);
-  const [acoesDesenvolvimento, setAcoesDesenvolvimento] = useState<{ competencia: string; acao: string; prazo: string; responsavel: string }[]>(
+  const [acoesDesenvolvimento, setAcoesDesenvolvimento] = useState<{ competencia: string; acao: string; prazo: string; prazoData: string; responsavel: string }[]>(
     draft?.acoesDesenvolvimento ?? defaultAcoes
   );
   const [pontosFortes, setPontosFortes] = useState(draft?.pontosFortes ?? consensoExistente?.pontosFortes ?? "");
@@ -96,12 +96,24 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
     return () => clearTimeout(t);
   }, [saveDraft]);
 
+  function calcPrazoData(dias: string): string {
+    if (!dias) return "";
+    const d = new Date();
+    d.setDate(d.getDate() + parseInt(dias));
+    return d.toLocaleDateString("pt-BR");
+  }
+
   function addAcao() {
-    setAcoesDesenvolvimento((prev) => [...prev, { competencia: "", acao: "", prazo: "", responsavel: "" }]);
+    setAcoesDesenvolvimento((prev) => [...prev, { competencia: "", acao: "", prazo: "", prazoData: "", responsavel: "" }]);
   }
 
   function updateAcao(index: number, field: string, value: string) {
-    setAcoesDesenvolvimento((prev) => prev.map((a, i) => (i === index ? { ...a, [field]: value } : a)));
+    setAcoesDesenvolvimento((prev) => prev.map((a, i) => {
+      if (i !== index) return a;
+      const updated = { ...a, [field]: value };
+      if (field === "prazo") updated.prazoData = calcPrazoData(value);
+      return updated;
+    }));
   }
 
   function removeAcao(index: number) {
@@ -298,7 +310,15 @@ export function ConsensoForm({ avaliacao }: { avaliacao: Avaliacao }) {
               </div>
               <div>
                 <label className="block text-xs text-stone-500 mb-1.5">Prazo</label>
-                <input type="text" value={acao.prazo} onChange={(e) => updateAcao(i, "prazo", e.target.value)} className="input-field text-sm" placeholder="ex: 30 dias, Out/2026" />
+                <select value={acao.prazo} onChange={(e) => updateAcao(i, "prazo", e.target.value)} className="input-field text-sm">
+                  <option value="">Selecione...</option>
+                  <option value="30">30 dias</option>
+                  <option value="60">60 dias</option>
+                  <option value="90">90 dias</option>
+                </select>
+                {acao.prazoData && (
+                  <p className="text-xs text-stone-400 mt-1.5">📅 Até {acao.prazoData}</p>
+                )}
               </div>
             </div>
             <div>

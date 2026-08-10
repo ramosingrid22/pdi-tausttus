@@ -24,6 +24,9 @@ export function Header() {
               <Link href="/admin/usuarios" className="flex items-center px-4 text-xs text-stone-400 hover:text-white hover:bg-white/5 transition-colors border-b-2 border-transparent hover:border-brand-orange">
                 Usuários
               </Link>
+              <Link href="/acompanhamento" className="flex items-center px-4 text-xs text-stone-400 hover:text-white hover:bg-white/5 transition-colors border-b-2 border-transparent hover:border-brand-orange">
+                PDI
+              </Link>
               <Link href="/admin/preview" className="flex items-center px-4 text-xs text-stone-400 hover:text-white hover:bg-white/5 transition-colors border-b-2 border-transparent hover:border-brand-orange">
                 Preview
               </Link>
@@ -74,6 +77,7 @@ export function Header() {
             <>
               <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="block py-2 text-sm text-stone-300 hover:text-white">Avaliações</Link>
               <Link href="/admin/usuarios" onClick={() => setMenuOpen(false)} className="block py-2 text-sm text-stone-300 hover:text-white">Usuários</Link>
+              <Link href="/acompanhamento" onClick={() => setMenuOpen(false)} className="block py-2 text-sm text-stone-300 hover:text-white">PDI</Link>
               <Link href="/admin/preview" onClick={() => setMenuOpen(false)} className="block py-2 text-sm text-stone-300 hover:text-white">Preview</Link>
             </>
           )}
