@@ -14,14 +14,10 @@ export default async function AcompanhamentoPage() {
   const avaliacoes = await prisma.avaliacao.findMany({
     where: { status: "CONCLUIDA", consenso: { not: null } },
     include: { colaborador: { select: { name: true } }, lider: { select: { name: true } } },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { colaborador: { name: "asc" } },
   });
 
   type Acao = {
-    colaborador: string;
-    unidade: string;
-    lider: string;
-    avaliacaoId: string;
     competencia: string;
     acao: string;
     prazo: string;
@@ -31,15 +27,31 @@ export default async function AcompanhamentoPage() {
     diasRestantes: number | null;
   };
 
+  type ColaboradorGroup = {
+    colaborador: string;
+    unidade: string;
+    lider: string;
+    avaliacaoId: string;
+    periodo: string;
+    acoes: Acao[];
+    temVencida: boolean;
+    temUrgente: boolean;
+  };
+
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
 
-  const todasAcoes: Acao[] = [];
+  const grupos: ColaboradorGroup[] = [];
+  let totalAcoes = 0;
+  let totalVencidas = 0;
+  let totalUrgentes = 0;
 
   for (const av of avaliacoes) {
     const consenso = av.consenso ? JSON.parse(av.consenso as string) : null;
-    const acoes = consenso?.acoesDesenvolvimento ?? [];
-    for (const a of acoes) {
+    const acoesBrut = consenso?.acoesDesenvolvimento ?? [];
+    const acoes: Acao[] = [];
+
+    for (const a of acoesBrut) {
       if (!a.acao) continue;
 
       let diasRestantes: number | null = null;
@@ -54,11 +66,7 @@ export default async function AcompanhamentoPage() {
         vencida = diff < 0;
       }
 
-      todasAcoes.push({
-        colaborador: av.colaborador.name,
-        unidade: av.unidade,
-        lider: av.lider.name,
-        avaliacaoId: av.id,
+      acoes.push({
         competencia: a.competencia,
         acao: a.acao,
         prazo: a.prazo ? `${a.prazo} dias` : "",
@@ -67,20 +75,42 @@ export default async function AcompanhamentoPage() {
         vencida,
         diasRestantes,
       });
+
+      totalAcoes++;
+      if (vencida) totalVencidas++;
+      else if (diasRestantes !== null && diasRestantes <= 15) totalUrgentes++;
     }
+
+    if (acoes.length === 0) continue;
+
+    // Ordenar ações: vencidas → urgentes → no prazo → sem data
+    acoes.sort((a, b) => {
+      if (a.diasRestantes === null && b.diasRestantes === null) return 0;
+      if (a.diasRestantes === null) return 1;
+      if (b.diasRestantes === null) return -1;
+      return a.diasRestantes - b.diasRestantes;
+    });
+
+    grupos.push({
+      colaborador: av.colaborador.name,
+      unidade: av.unidade,
+      lider: av.lider.name,
+      avaliacaoId: av.id,
+      periodo: av.periodo,
+      acoes,
+      temVencida: acoes.some((a) => a.vencida),
+      temUrgente: acoes.some((a) => !a.vencida && a.diasRestantes !== null && a.diasRestantes <= 15),
+    });
   }
 
-  // Ordenar: vencidas primeiro, depois por dias restantes
-  todasAcoes.sort((a, b) => {
-    if (a.diasRestantes === null && b.diasRestantes === null) return 0;
-    if (a.diasRestantes === null) return 1;
-    if (b.diasRestantes === null) return -1;
-    return a.diasRestantes - b.diasRestantes;
+  // Ordenar grupos: com vencidas primeiro, depois urgentes, depois resto
+  grupos.sort((a, b) => {
+    if (a.temVencida && !b.temVencida) return -1;
+    if (!a.temVencida && b.temVencida) return 1;
+    if (a.temUrgente && !b.temUrgente) return -1;
+    if (!a.temUrgente && b.temUrgente) return 1;
+    return a.colaborador.localeCompare(b.colaborador);
   });
-
-  const vencidas = todasAcoes.filter((a) => a.vencida);
-  const urgentes = todasAcoes.filter((a) => !a.vencida && a.diasRestantes !== null && a.diasRestantes <= 15);
-  const normal = todasAcoes.filter((a) => !a.vencida && (a.diasRestantes === null || a.diasRestantes > 15));
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -90,92 +120,86 @@ export default async function AcompanhamentoPage() {
           <a href="/dashboard" className="btn-secondary text-sm">← Voltar</a>
           <div>
             <h1 className="text-xl font-bold text-stone-800">Acompanhamento do PDI</h1>
-            <p className="text-sm text-stone-500 mt-0.5">{todasAcoes.length} ações de desenvolvimento em andamento</p>
+            <p className="text-sm text-stone-500 mt-0.5">{grupos.length} colaborador{grupos.length !== 1 ? "es" : ""} · {totalAcoes} ações</p>
           </div>
         </div>
 
         {/* Resumo */}
         <div className="grid grid-cols-3 gap-4">
           <div className="card text-center">
-            <div className="text-3xl font-black text-red-600">{vencidas.length}</div>
+            <div className="text-3xl font-black text-red-600">{totalVencidas}</div>
             <div className="text-xs text-stone-500 mt-1 font-medium uppercase tracking-wide">Vencidas</div>
           </div>
           <div className="card text-center">
-            <div className="text-3xl font-black text-amber-500">{urgentes.length}</div>
+            <div className="text-3xl font-black text-amber-500">{totalUrgentes}</div>
             <div className="text-xs text-stone-500 mt-1 font-medium uppercase tracking-wide">Vencem em até 15 dias</div>
           </div>
           <div className="card text-center">
-            <div className="text-3xl font-black text-green-600">{normal.length}</div>
+            <div className="text-3xl font-black text-green-600">{totalAcoes - totalVencidas - totalUrgentes}</div>
             <div className="text-xs text-stone-500 mt-1 font-medium uppercase tracking-wide">No prazo</div>
           </div>
         </div>
 
-        {vencidas.length > 0 && (
-          <GrupoAcoes titulo="⚠ Vencidas" acoes={vencidas} cor="red" />
-        )}
-        {urgentes.length > 0 && (
-          <GrupoAcoes titulo="⏰ Vencem em até 15 dias" acoes={urgentes} cor="amber" />
-        )}
-        {normal.length > 0 && (
-          <GrupoAcoes titulo="✅ No prazo" acoes={normal} cor="green" />
-        )}
-
-        {todasAcoes.length === 0 && (
+        {grupos.length === 0 && (
           <div className="card text-center py-12 text-stone-400">
             Nenhuma ação de PDI registrada ainda.
           </div>
         )}
-      </main>
-    </div>
-  );
-}
 
-function GrupoAcoes({ titulo, acoes, cor }: {
-  titulo: string;
-  acoes: any[];
-  cor: "red" | "amber" | "green";
-}) {
-  const borderCor = cor === "red" ? "border-red-400" : cor === "amber" ? "border-amber-400" : "border-green-400";
-  const bgCor = cor === "red" ? "bg-red-50 text-red-700" : cor === "amber" ? "bg-amber-50 text-amber-700" : "bg-green-50 text-green-700";
-
-  return (
-    <section className="space-y-3">
-      <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-widest">{titulo}</h2>
-      {acoes.map((a, i) => (
-        <div key={i} className={`card border-l-4 ${borderCor} space-y-2`}>
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <span className="font-semibold text-stone-800 text-sm">{a.colaborador}</span>
-              <span className="text-stone-400 text-xs mx-2">·</span>
-              <span className="text-stone-500 text-xs">{a.unidade}</span>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {a.prazoData && (
-                <span className={`text-xs font-semibold px-2 py-1 rounded-full ${bgCor}`}>
-                  {a.vencida
-                    ? `Venceu ${a.prazoData} (${Math.abs(a.diasRestantes)} dias atrás)`
-                    : a.diasRestantes === 0
-                    ? `Vence hoje — ${a.prazoData}`
-                    : `${a.diasRestantes} dias — ${a.prazoData}`}
-                </span>
-              )}
-              <a
-                href={`/avaliacao/${a.avaliacaoId}/relatorio`}
-                className="text-xs text-brand-orange hover:underline"
-              >
+        {grupos.map((g) => (
+          <div key={g.avaliacaoId} className={`card space-y-4 ${g.temVencida ? "border-l-4 border-red-400" : g.temUrgente ? "border-l-4 border-amber-400" : ""}`}>
+            {/* Cabeçalho do colaborador */}
+            <div className="flex items-start justify-between flex-wrap gap-3">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-stone-800">{g.colaborador}</span>
+                  {g.temVencida && <span className="text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">⚠ Ação vencida</span>}
+                  {!g.temVencida && g.temUrgente && <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">⏰ Vence em breve</span>}
+                </div>
+                <div className="text-xs text-stone-400 mt-0.5">
+                  {g.unidade} · Líder: {g.lider} · {g.periodo}
+                </div>
+              </div>
+              <a href={`/avaliacao/${g.avaliacaoId}/relatorio`} className="text-xs text-brand-orange hover:underline shrink-0">
                 Ver relatório →
               </a>
             </div>
+
+            {/* Ações */}
+            <div className="divide-y divide-stone-50">
+              {g.acoes.map((a, i) => {
+                const statusColor = a.vencida
+                  ? "bg-red-50 text-red-700"
+                  : a.diasRestantes !== null && a.diasRestantes <= 15
+                  ? "bg-amber-50 text-amber-700"
+                  : "bg-green-50 text-green-700";
+
+                return (
+                  <div key={i} className="py-3 flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-stone-400 mb-0.5">{a.competencia}</div>
+                      <div className="text-sm text-stone-700">{a.acao}</div>
+                      {a.responsavel && <div className="text-xs text-stone-400 mt-0.5">Responsável: {a.responsavel}</div>}
+                    </div>
+                    {a.prazoData && (
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${statusColor}`}>
+                        {a.vencida
+                          ? `Venceu ${a.prazoData} (${Math.abs(a.diasRestantes!)} dias atrás)`
+                          : a.diasRestantes === 0
+                          ? `Vence hoje — ${a.prazoData}`
+                          : `${a.diasRestantes} dias — ${a.prazoData}`}
+                      </span>
+                    )}
+                    {!a.prazoData && a.prazo && (
+                      <span className="text-xs text-stone-400 shrink-0">{a.prazo}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div>
-            <span className="text-xs font-semibold text-stone-400">{a.competencia}</span>
-            <p className="text-sm text-stone-700 mt-0.5">{a.acao}</p>
-          </div>
-          {a.responsavel && (
-            <p className="text-xs text-stone-400">Responsável: {a.responsavel}</p>
-          )}
-        </div>
-      ))}
-    </section>
+        ))}
+      </main>
+    </div>
   );
 }
