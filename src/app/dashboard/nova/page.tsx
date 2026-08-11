@@ -15,13 +15,13 @@ export default async function NovaAvaliacao() {
   let colaboradores;
   if (user.role === "ADMIN") {
     colaboradores = await prisma.user.findMany({
-      where: { role: { not: "ADMIN" } },
+      where: { role: { not: "ADMIN" }, ativo: true },
       select: { id: true, name: true, cargo: true, unidade: true, liderId: true },
       orderBy: { name: "asc" },
     });
   } else {
     colaboradores = await prisma.user.findMany({
-      where: { role: "COLABORADOR", liderId: user.id },
+      where: { role: "COLABORADOR", liderId: user.id, ativo: true },
       select: { id: true, name: true, cargo: true, unidade: true, liderId: true },
       orderBy: { name: "asc" },
     });

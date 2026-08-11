@@ -15,6 +15,7 @@ const ROLE_LABELS: Record<string, string> = {
 type User = {
   id: string; name: string; username: string; role: string;
   cargo: string | null; unidade: string | null; liderId: string | null;
+  ativo: boolean;
   lider?: { id: string; name: string } | null;
 };
 
@@ -86,6 +87,19 @@ export function UsuariosClient({ initialUsers, lideres }: { initialUsers: User[]
     setLoading(false);
   }
 
+  async function handleToggleAtivo(u: User) {
+    const novoAtivo = !u.ativo;
+    if (!confirm(`${novoAtivo ? "Reativar" : "Desativar"} ${u.name}? ${novoAtivo ? "O usuário voltará a aparecer em novas avaliações." : "O histórico será mantido, mas não poderá mais fazer login nem aparecer em novas avaliações."}`)) return;
+    setLoading(true);
+    await fetch(`/pdi/api/usuarios/${u.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ativo: novoAtivo }),
+    });
+    setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, ativo: novoAtivo } : x));
+    setLoading(false);
+  }
+
   async function handleReset(u: User) {
     setLoading(true);
     await fetch(`/pdi/api/usuarios/${u.id}`, {
@@ -117,13 +131,16 @@ export function UsuariosClient({ initialUsers, lideres }: { initialUsers: User[]
 
       <div className="space-y-2">
         {users.map((u) => (
-          <div key={u.id} className="card flex items-center justify-between">
+          <div key={u.id} className={`card flex items-center justify-between ${!u.ativo ? "opacity-50" : ""}`}>
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-brand-orange/10 flex items-center justify-center font-bold text-brand-orange text-sm">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${u.ativo ? "bg-brand-orange/10 text-brand-orange" : "bg-stone-100 text-stone-400"}`}>
                 {u.name.charAt(0).toUpperCase()}
               </div>
               <div>
-                <div className="font-semibold text-stone-800">{u.name}</div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-stone-800">{u.name}</span>
+                  {!u.ativo && <span className="text-xs font-medium bg-stone-100 text-stone-400 px-2 py-0.5 rounded-full">Inativo</span>}
+                </div>
                 <div className="text-xs text-stone-400 mt-0.5">
                   @{u.username}
                   {u.cargo && <> · {u.cargo}</>}
@@ -136,6 +153,9 @@ export function UsuariosClient({ initialUsers, lideres }: { initialUsers: User[]
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${roleColor[u.role] ?? ""}`}>
                 {ROLE_LABELS[u.role] ?? u.role}
               </span>
+              <button onClick={() => handleToggleAtivo(u)} disabled={loading} className={`text-xs transition-colors ${u.ativo ? "text-stone-400 hover:text-red-500" : "text-stone-400 hover:text-green-600"}`}>
+                {u.ativo ? "Desativar" : "Reativar"}
+              </button>
               <button onClick={() => setConfirmReset(u)} className="text-xs text-stone-400 hover:text-amber-500 transition-colors">Resetar senha</button>
               <button onClick={() => openEdit(u)} className="text-xs text-stone-400 hover:text-brand-orange transition-colors">Editar</button>
               <button onClick={() => setConfirmDelete(u.id)} className="text-xs text-stone-400 hover:text-red-500 transition-colors">Excluir</button>

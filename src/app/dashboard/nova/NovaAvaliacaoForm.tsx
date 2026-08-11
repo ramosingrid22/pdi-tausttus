@@ -12,7 +12,18 @@ interface Colaborador {
 export function NovaAvaliacaoForm({ colaboradores, liderId }: { colaboradores: Colaborador[]; liderId: string | null }) {
   const router = useRouter();
   const [colaboradorId, setColaboradorId] = useState("");
-  const [periodo, setPeriodo] = useState("Agosto 2026");
+
+  function periodoSugerido() {
+    const now = new Date();
+    const mes = now.getMonth(); // 0-11
+    const ano = now.getFullYear();
+    if (mes <= 2) return `Q1 ${ano} — Jan a Mar`;
+    if (mes <= 5) return `Q2 ${ano} — Abr a Jun`;
+    if (mes <= 8) return `Q3 ${ano} — Jul a Set`;
+    return `Q4 ${ano} — Out a Dez`;
+  }
+
+  const [periodo, setPeriodo] = useState(periodoSugerido());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 

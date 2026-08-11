@@ -12,7 +12,7 @@ export default async function UsuariosPage() {
   const users = await prisma.user.findMany({
     select: {
       id: true, name: true, username: true, role: true,
-      cargo: true, unidade: true, liderId: true,
+      cargo: true, unidade: true, liderId: true, ativo: true,
       lider: { select: { id: true, name: true } },
     },
     orderBy: { name: "asc" },

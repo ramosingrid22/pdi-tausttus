@@ -11,7 +11,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const body = await req.json();
-  const { name, password, role, cargo, unidade, liderId, resetPassword, username } = body;
+  const { name, password, role, cargo, unidade, liderId, resetPassword, username, ativo } = body;
 
   const data: any = {};
   if (name) data.name = name;
@@ -20,6 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (unidade !== undefined) data.unidade = unidade || null;
   if (liderId !== undefined) data.liderId = liderId || null;
   if (password) data.password = await bcrypt.hash(password, 10);
+  if (ativo !== undefined) data.ativo = ativo;
 
   if (resetPassword && username) {
     const firstName = username.split(".")[0];

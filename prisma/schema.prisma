@@ -18,6 +18,7 @@ model User {
   unidade            String?
   liderId            String?
   mustChangePassword Boolean @default(false)
+  ativo              Boolean @default(true)
   lider     User?    @relation("LiderColaborador", fields: [liderId], references: [id])
   colaboradores User[] @relation("LiderColaborador")
 
