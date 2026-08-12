@@ -12,7 +12,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   }
 
-  const { acaoIndex, concluida } = await req.json();
+  const { acaoIndex, concluida, observacaoConclusao } = await req.json();
 
   const avaliacao = await prisma.avaliacao.findUnique({ where: { id: params.id } });
   if (!avaliacao || !avaliacao.consenso) {
@@ -26,7 +26,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: "Índice inválido" }, { status: 400 });
   }
 
-  acoes[acaoIndex] = { ...acoes[acaoIndex], concluida };
+  acoes[acaoIndex] = {
+    ...acoes[acaoIndex],
+    concluida,
+    observacaoConclusao: concluida ? (observacaoConclusao ?? "") : "",
+  };
   consenso.acoesDesenvolvimento = acoes;
 
   await prisma.avaliacao.update({

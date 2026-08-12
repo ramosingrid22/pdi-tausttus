@@ -135,6 +135,11 @@ export default async function ConclusaoPage({ params }: { params: { id: string }
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-stone-400 mb-0.5">{a.competencia}</div>
                   <div className={`text-sm text-stone-700 ${a.concluida ? "line-through opacity-60" : ""}`}>{a.acao}</div>
+                  {a.concluida && a.observacaoConclusao && (
+                    <div className="mt-1.5 bg-green-50 rounded-lg px-3 py-1.5 text-xs text-green-700">
+                      <span className="font-semibold">Observação: </span>{a.observacaoConclusao}
+                    </div>
+                  )}
                   <div className="flex gap-4 mt-1 flex-wrap">
                     {a.responsavel && (
                       <span className="text-xs text-stone-400">Responsável: {a.responsavel}</span>
