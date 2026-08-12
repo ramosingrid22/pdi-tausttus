@@ -14,7 +14,7 @@ export default async function AcompanhamentoPage() {
 
   const avaliacoes = await prisma.avaliacao.findMany({
     where: { status: "CONCLUIDA", consenso: { not: null } },
-    include: { colaborador: { select: { name: true } }, lider: { select: { name: true } } },
+    include: { colaborador: { select: { id: true, name: true } }, lider: { select: { name: true } } },
     orderBy: { colaborador: { name: "asc" } },
   });
 
@@ -78,6 +78,7 @@ export default async function AcompanhamentoPage() {
 
     return [{
       colaborador: av.colaborador.name,
+      colaboradorId: av.colaboradorId,
       unidade: av.unidade,
       lider: av.lider.name,
       avaliacaoId: av.id,

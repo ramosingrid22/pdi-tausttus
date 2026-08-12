@@ -18,6 +18,7 @@ type Acao = {
 
 type Grupo = {
   colaborador: string;
+  colaboradorId: string;
   unidade: string;
   lider: string;
   avaliacaoId: string;
@@ -161,7 +162,7 @@ export function AcompanhamentoClient({ grupos: initialGrupos }: { grupos: Grupo[
               <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                 {todasConcluidas && (
                   <Link
-                    href={`/avaliacao/${g.avaliacaoId}/conclusao`}
+                    href={`/colaborador/${g.colaboradorId}/prontuario`}
                     className="text-sm font-semibold text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl transition-colors"
                   >
                     📋 Ver prontuário
