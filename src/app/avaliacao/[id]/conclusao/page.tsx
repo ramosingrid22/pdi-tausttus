@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Header } from "@/components/Header";
+import { PrintButton } from "./PrintButton";
 
 export default async function ConclusaoPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -41,9 +42,7 @@ export default async function ConclusaoPage({ params }: { params: { id: string }
         <div className="flex items-center gap-3 print:hidden">
           <a href="/acompanhamento" className="btn-secondary text-sm">← Acompanhamento</a>
           <a href={`/avaliacao/${params.id}/relatorio`} className="btn-secondary text-sm">Ver relatório completo</a>
-          <button onClick={() => window.print()} className="ml-auto btn-primary text-sm print:hidden">
-            Imprimir prontuário
-          </button>
+          <PrintButton />
         </div>
 
         {/* Cabeçalho do prontuário */}
