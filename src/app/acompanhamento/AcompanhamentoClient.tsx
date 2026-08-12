@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 type Acao = {
   competencia: string;
@@ -159,19 +160,19 @@ export function AcompanhamentoClient({ grupos: initialGrupos }: { grupos: Grupo[
 
               <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                 {todasConcluidas && (
-                  <a
+                  <Link
                     href={`/avaliacao/${g.avaliacaoId}/conclusao`}
                     className="text-sm font-semibold text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl transition-colors"
                   >
                     📋 Ver prontuário
-                  </a>
+                  </Link>
                 )}
-                <a
+                <Link
                   href={`/avaliacao/${g.avaliacaoId}/relatorio`}
                   className="text-xs text-brand-orange hover:underline"
                 >
                   Ver relatório →
-                </a>
+                </Link>
               </div>
             </div>
 
