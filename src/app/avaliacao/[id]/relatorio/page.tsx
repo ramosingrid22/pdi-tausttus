@@ -28,6 +28,11 @@ export default async function RelatorioPage({ params }: { params: { id: string }
     user.role !== "ADMIN"
   ) redirect("/dashboard");
 
+  // Redireciona colaborador para a fase correta se a avaliação ainda não foi concluída
+  if (avaliacao.status === "AGUARDANDO_COLABORADOR" && avaliacao.colaboradorId === user.id) {
+    redirect(`/avaliacao/${params.id}/autoavaliacao`);
+  }
+
   const auto = avaliacao.autoavaliacao ? JSON.parse(avaliacao.autoavaliacao as string) : null;
   const liderData = avaliacao.avaliacaoLider ? JSON.parse(avaliacao.avaliacaoLider as string) : null;
   const consenso = avaliacao.consenso ? JSON.parse(avaliacao.consenso as string) : null;
